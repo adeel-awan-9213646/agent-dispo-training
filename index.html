@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartBrains BPO - VICIdial Agent Disposition Training Portal</title>
+    <title>SmartBrains BPO - VICIdial Agent Disposition Training & Test Portal</title>
     <style>
         :root {
             --primary-blue: #0d47a1;
@@ -115,6 +115,37 @@
             margin-bottom: 16px;
             border-bottom: 2px solid #e3f2fd;
             padding-bottom: 8px;
+        }
+
+        /* Agent Info Input Box */
+        .agent-login-box {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .agent-login-box input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            outline: none;
+        }
+
+        .btn-start {
+            background: var(--primary-blue);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
         }
 
         /* Practice Interactive Simulator */
@@ -257,34 +288,47 @@
 <div class="container">
     <div class="header">
         <h1>SmartBrains BPO</h1>
-        <p>VICIdial Call Disposition Agent Training & Simulator Portal</p>
+        <p>VICIdial Call Disposition Agent Training & Live Assessment Portal</p>
     </div>
 
     <!-- Navigation Tabs -->
     <div class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('simTab', this)">🎮 Interactive Call Simulator</button>
+        <button class="tab-btn active" onclick="switchTab('simTab', this)">📝 Agent Qualification Test</button>
         <button class="tab-btn" onclick="switchTab('dictTab', this)">📚 Disposition Guide & Dictionary</button>
     </div>
 
-    <!-- TAB 1: INTERACTIVE SIMULATOR -->
+    <!-- TAB 1: TEST ASSESSMENT -->
     <div id="simTab" class="tab-content active">
         <div class="card">
-            <div class="card-title">📞 Call Scenario Practice (Select Correct Disposition)</div>
+            <div class="card-title">📝 Official Agent Disposition Test</div>
             
-            <div class="scenario-box" id="scenarioText">
-                Loading Scenario...
+            <div class="agent-login-box" id="loginBox">
+                <label style="font-weight:800; color:#0d47a1;">Agent Full Name:</label>
+                <input type="text" id="agentNameInput" placeholder="Enter your full name to start test...">
+                <button class="btn-start" onclick="startAgentTest()">Start Official Test</button>
             </div>
 
-            <div class="vici-panel">
-                <div class="vici-title">CALL DISPOSITION</div>
-                <div class="dispo-grid" id="dispoOptions">
-                    <!-- Buttons rendered dynamically -->
+            <div id="testArea" style="display:none;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-weight:800; color:#555;">
+                    <span id="agentDisplay">Agent: -</span>
+                    <span id="questionCounter">Question 1 of 10</span>
                 </div>
+
+                <div class="scenario-box" id="scenarioText">
+                    Loading Scenario...
+                </div>
+
+                <div class="vici-panel">
+                    <div class="vici-title">SELECT CALL DISPOSITION</div>
+                    <div class="dispo-grid" id="dispoOptions">
+                        <!-- Buttons rendered dynamically -->
+                    </div>
+                </div>
+
+                <div id="feedbackBox" class="feedback-box"></div>
+
+                <button class="btn-next" id="btnNextScenario" style="display:none;" onclick="nextQuestion()">Next Question ➔</button>
             </div>
-
-            <div id="feedbackBox" class="feedback-box"></div>
-
-            <button class="btn-next" id="btnNextScenario" style="display:none;" onclick="loadRandomScenario()">Next Scenario ➔</button>
         </div>
     </div>
 
@@ -318,6 +362,9 @@
 </div>
 
 <script>
+    // PASTE YOUR GOOGLE APPS SCRIPT WEBHOOK URL HERE
+    const GOOGLE_WEBHOOK_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEBHOOK_URL";
+
     const dispositionMaster = [
         { code: "A", name: "Answering Machine", desc: "Select when the call goes directly to Voicemail, Answering Machine, or an Automated Answering System." },
         { code: "B", name: "Busy", desc: "Select when the customer's phone line gives a busy tone or engaged signal." },
@@ -347,59 +394,22 @@
     ];
 
     const trainingScenarios = [
-        {
-            scenario: "Call connected. You delivered your opening greeting, but heard a Voicemail prompt and a beep tone.",
-            correctCode: "A",
-            explanation: "When a call reaches a voicemail or automated answering system, disposition as 'A - Answering Machine'."
-        },
-        {
-            scenario: "You delivered the full pitch and explained pricing. The customer replied: 'I appreciate the offer, but I don't want to purchase this plan'.",
-            correctCode: "DEC",
-            explanation: "When a customer declines after receiving full pitch and pricing, disposition as 'DEC - Declined Sale'."
-        },
-        {
-            scenario: "The customer stated: 'I am currently driving. Please call me back today at 6:00 PM'.",
-            correctCode: "CALLBK",
-            explanation: "When a customer requests a specific callback time, disposition as 'CALLBK - Call Back' and set the timer."
-        },
-        {
-            scenario: "An upset customer shouts: 'Stop calling my phone! Take me off your calling list immediately!'",
-            correctCode: "DNC",
-            explanation: "When a customer explicitly demands removal from the calling list, disposition as 'DNC - DO NOT CALL'."
-        },
-        {
-            scenario: "The call connected, but the customer only speaks Spanish and cannot understand English.",
-            correctCode: "LBR",
-            explanation: "When there is a language communication barrier, disposition as 'LBR - Language Barrier'."
-        },
-        {
-            scenario: "You started your introductory pitch, but within 3 seconds the customer hung up the line.",
-            correctCode: "HUBP",
-            explanation: "When the customer disconnects before the pitch is delivered, disposition as 'HUBP - Hangup Before Pitch'."
-        },
-        {
-            scenario: "You delivered the entire product pitch, but before you could ask for confirmation, the customer hung up.",
-            correctCode: "HUAP",
-            explanation: "When the customer hangs up after hearing the complete pitch, disposition as 'HUAP - Hangup After Pitch'."
-        },
-        {
-            scenario: "You hear an automated operator recording: 'The number you have dialed is disconnected or no longer in service'.",
-            correctCode: "DC",
-            explanation: "For invalid or out-of-service numbers, disposition as 'DC - Disconnected Number'."
-        },
-        {
-            scenario: "The customer states their age is 82 years, but your campaign maximum age limit is 75 years.",
-            correctCode: "OverAg",
-            explanation: "When a customer exceeds the allowable campaign age criteria, disposition as 'OverAg - Over Age'."
-        },
-        {
-            scenario: "The call connected, but you experience complete silence with no sound coming from either side.",
-            correctCode: "DAIR",
-            explanation: "When there is total audio silence upon call connection, disposition as 'DAIR - Dead Air'."
-        }
+        { scenario: "Call connected. You delivered your opening greeting, but heard a Voicemail prompt and a beep tone.", correctCode: "A", explanation: "When a call reaches voicemail, disposition as 'A - Answering Machine'." },
+        { scenario: "You delivered the full pitch and explained pricing. The customer replied: 'I appreciate the offer, but I don't want to purchase this plan'.", correctCode: "DEC", explanation: "Refusal after pitch and pricing is 'DEC - Declined Sale'." },
+        { scenario: "The customer stated: 'I am currently driving. Please call me back today at 6:00 PM'.", correctCode: "CALLBK", explanation: "Callback at specific time is 'CALLBK - Call Back'." },
+        { scenario: "An upset customer shouts: 'Stop calling my phone! Take me off your calling list immediately!'", correctCode: "DNC", explanation: "Strict refusal and list removal demand is 'DNC - DO NOT CALL'." },
+        { scenario: "The call connected, but the customer only speaks Spanish and cannot understand English.", correctCode: "LBR", explanation: "Language communication issue is 'LBR - Language Barrier'." },
+        { scenario: "You started your introductory pitch, but within 3 seconds the customer hung up the line.", correctCode: "HUBP", explanation: "Hangup before pitch delivery is 'HUBP - Hangup Before Pitch'." },
+        { scenario: "You delivered the entire product pitch, but before you could ask for confirmation, the customer hung up.", correctCode: "HUAP", explanation: "Hangup after hearing pitch is 'HUAP - Hangup After Pitch'." },
+        { scenario: "You hear an automated operator recording: 'The number you have dialed is disconnected or no longer in service'.", correctCode: "DC", explanation: "Out of service number is 'DC - Disconnected Number'." },
+        { scenario: "The customer states their age is 82 years, but your campaign maximum age limit is 75 years.", correctCode: "OverAg", explanation: "Exceeding allowable age limit is 'OverAg - Over Age'." },
+        { scenario: "The call connected, but you experience complete silence with no sound coming from either side.", correctCode: "DAIR", explanation: "Total audio silence is 'DAIR - Dead Air'." }
     ];
 
-    let currentScenario = null;
+    let currentAgentName = "";
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let testHistory = [];
 
     function switchTab(tabId, btn) {
         document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
@@ -420,29 +430,114 @@
         });
     }
 
-    function loadRandomScenario() {
+    function startAgentTest() {
+        const name = document.getElementById('agentNameInput').value.trim();
+        if(!name) {
+            alert("Please enter your full name before starting the test.");
+            return;
+        }
+
+        currentAgentName = name;
+        currentQuestionIndex = 0;
+        score = 0;
+        testHistory = [];
+
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('testArea').style.display = 'block';
+        document.getElementById('agentDisplay').innerText = "Agent: " + currentAgentName;
+
+        loadQuestion();
+    }
+
+    function loadQuestion() {
         document.getElementById('feedbackBox').style.display = 'none';
         document.getElementById('btnNextScenario').style.display = 'none';
 
-        const randomIndex = Math.floor(Math.random() * trainingScenarios.length);
-        currentScenario = trainingScenarios[randomIndex];
+        document.getElementById('questionCounter').innerText = `Question ${currentQuestionIndex + 1} of ${trainingScenarios.length}`;
+        const item = trainingScenarios[currentQuestionIndex];
+        document.getElementById('scenarioText').innerText = `📋 Scenario: "${item.scenario}"`;
 
-        document.getElementById('scenarioText').innerText = `📋 Scenario: "${currentScenario.scenario}"`;
+        // Enable dispo buttons
+        document.querySelectorAll('.dispo-btn').forEach(b => b.disabled = false);
     }
 
     function checkAnswer(selectedCode) {
+        // Disable buttons after selection
+        document.querySelectorAll('.dispo-btn').forEach(b => b.disabled = true);
+
+        const currentItem = trainingScenarios[currentQuestionIndex];
+        const isCorrect = (selectedCode === currentItem.correctCode);
+
+        if(isCorrect) score++;
+
+        testHistory.push(`Q${currentQuestionIndex+1}: ${isCorrect ? 'PASSED' : 'FAILED'} (Selected: ${selectedCode}, Correct: ${currentItem.correctCode})`);
+
         const feedback = document.getElementById('feedbackBox');
         feedback.style.display = 'block';
 
-        if (selectedCode === currentScenario.correctCode) {
+        if (isCorrect) {
             feedback.className = 'feedback-box feedback-correct';
-            feedback.innerHTML = `✅ Correct! Selected Disposition: <strong>${currentScenario.correctCode}</strong><br><small>${currentScenario.explanation}</small>`;
+            feedback.innerHTML = `✅ Correct! Selected: <strong>${selectedCode}</strong><br><small>${currentItem.explanation}</small>`;
         } else {
             feedback.className = 'feedback-box feedback-wrong';
-            feedback.innerHTML = `❌ Incorrect Selection! You selected <strong>${selectedCode}</strong>.<br>👉 Correct Code: <strong>${currentScenario.correctCode}</strong><br><small>${currentScenario.explanation}</small>`;
+            feedback.innerHTML = `❌ Incorrect! You selected <strong>${selectedCode}</strong>.<br>👉 Correct Code: <strong>${currentItem.correctCode}</strong><br><small>${currentItem.explanation}</small>`;
         }
 
         document.getElementById('btnNextScenario').style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if(currentQuestionIndex < trainingScenarios.length) {
+            loadQuestion();
+        } else {
+            finishTest();
+        }
+    }
+
+    function finishTest() {
+        const total = trainingScenarios.length;
+        const pct = Math.round((score / total) * 100);
+
+        document.getElementById('testArea').innerHTML = `
+            <div style="text-align:center; padding: 20px;">
+                <h2 style="color:#0d47a1; font-size: 26px; font-weight: 900;">🎉 Assessment Complete!</h2>
+                <p style="font-size:18px; font-weight:700; margin: 10px 0;">Agent: ${currentAgentName}</p>
+                <div style="font-size:36px; font-weight:900; color:${pct >= 80 ? '#2e7d32' : '#c62828'}; margin: 15px 0;">
+                    Score: ${score} / ${total} (${pct}%)
+                </div>
+                <p style="font-size:14px; font-weight:700; color:#555;" id="syncStatus">Syncing results to Google Sheet...</p>
+                <button class="btn-start" onclick="location.reload()" style="margin-top:20px;">Take Test Again 🔄</button>
+            </div>
+        `;
+
+        sendToGoogleSheet(pct);
+    }
+
+    function sendToGoogleSheet(percentage) {
+        if (!GOOGLE_WEBHOOK_URL || GOOGLE_WEBHOOK_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
+            document.getElementById('syncStatus').innerText = "⚠️ Results local only (Google Sheet Webhook URL not set up yet).";
+            return;
+        }
+
+        const payload = {
+            agentName: currentAgentName,
+            score: score,
+            total: trainingScenarios.length,
+            percentage: percentage,
+            details: testHistory.join(" | ")
+        };
+
+        fetch(GOOGLE_WEBHOOK_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            document.getElementById('syncStatus').innerText = "✅ Test results saved successfully to Google Sheet!";
+        }).catch(err => {
+            document.getElementById('syncStatus').innerText = "❌ Sync failed. Please check internet connection.";
+        });
     }
 
     function renderDictionary() {
@@ -470,7 +565,6 @@
 
     window.onload = function() {
         renderDispoButtons();
-        loadRandomScenario();
         renderDictionary();
     };
 </script>
